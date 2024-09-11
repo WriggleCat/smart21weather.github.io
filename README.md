@@ -1,6 +1,3 @@
-# smart21weather.github.io
-smart21weather.github.io
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
