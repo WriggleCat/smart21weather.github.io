@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>현재 날씨 정보</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0; /* 여백 제거 */
+            padding: 0px; /* 원하면 상단 패딩 추가 */
+        }
+        #weatherInfo {
+            font-size: 24px;
+            margin-top: 0; /* 여백 제거 */
+        }
+        #error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <div id="weatherInfo"></div>
+    <div id="error"></div>
+    <script>
+        async function fetchWeather() {
+            const today = new Date();
+            const date = today.toISOString().slice(0, 10).replace(/-/g, '');
+            let hour = String(today.getHours()).padStart(2, '0') + '00';
+            const baseTimeArray = [200, 500, 800, 1100, 1400, 1700, 2000, 2300];
+
+            for (const baseTime of baseTimeArray) {
+                if (parseInt(hour) < baseTime) {
+                    hour = String(baseTime).padStart(4, '0');
+                    break;
+                }
+            }
+            hour = (parseInt(hour) - 300).toString().padStart(4, '0');
+
+            if (parseInt(hour) < 0) {
+                const yesterday = new Date(today);
+                yesterday.setDate(today.getDate() - 1);
+                const newDate = yesterday.toISOString().slice(0, 10).replace(/-/g, '');
+                hour = '2300';
+                await fetchWeatherData(newDate, hour, yesterday);
+            } else {
+                await fetchWeatherData(date, hour, today);
+            }
+        }
+
+        async function fetchWeatherData(date, hour, today) {
+            const area = "&nx=59&ny=74"; // 지역 좌표
+            const url = `http://apis.data.go.kr/1360000/VilageFcstInfoService_2.0/getVilageFcst?serviceKey=jf%2FvdfY7Y%2BbX9OrcH4QGLyZoaIZAXSa7hYlvlZ9mU%2B8eLl3o7ZkUFIHKY45xn1ksjCiwnxG5xvrojybxWJ3R5Q%3D%3D&numOfRows=10&pageNo=1&dataType=JSON&base_date=${date}&base_time=${hour}${area}`;
+            
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                const weatherInfo = data.response.body.items.item;
+                
+                let weatherString = '';
+                let temperature = '';
+
+                weatherInfo.forEach(item => {
+                    if (item.category === 'SKY') {
+                        const sky = parseInt(item.fcstValue);
+                        if (sky === 1) {
+                            weatherString = '맑음';
+                        } else if (sky === 2) {
+                            weatherString = '구름 많음';
+                        } else if (sky === 3) {
+                            weatherString = '흐림';
+                        } else {
+                            weatherString = '비';
+                        }
+                    } else if (item.category === 'TMP') {
+                        temperature = `${item.fcstValue}°C`;
+                    }
+                });
+
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                const hour = String(today.getHours()).padStart(2, '0');
+                const minute = String(today.getMinutes()).padStart(2, '0');
+
+                document.getElementById('weatherInfo').innerText = `${year}년 ${month}월 ${day}일 ${hour}시 ${minute}분 ${weatherString} ${temperature}`;
+            } catch (error) {
+                console.error('Error fetching weather data:', error);
+                document.getElementById('error').innerText = `데이터 오류: ${error.message}`;
+            }
+        }
+
+        fetchWeather();
+    </script>
+</body>
+</html>
